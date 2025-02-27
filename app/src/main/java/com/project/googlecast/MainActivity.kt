@@ -1,47 +1,51 @@
 package com.project.googlecast
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
+import com.google.android.gms.cast.MediaInfo
+import com.google.android.gms.cast.MediaLoadOptions
+import com.google.android.gms.cast.framework.CastContext
+import com.project.googlecast.ui.presentation.CastAppUI
 import com.project.googlecast.ui.theme.GoogleCastTheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var castContext: CastContext
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        castContext = CastContext.getSharedInstance(this)
+
         setContent {
             GoogleCastTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                CastAppUI(castContext)
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    fun startCasting(castContext: CastContext) {
+        val castSession = castContext.sessionManager.currentCastSession
+        if (castSession != null && castSession.isConnected) {
+            val remoteMediaClient = castSession.remoteMediaClient
+            if (remoteMediaClient != null) {
+                val mediaInfo = MediaInfo.Builder(
+                    "https://videolink-test.mycdn.me/?pct=1&sig=6QNOvp0y3BE&ct=0&clientType=45&mid=193241622673&type=5"
+                )
+                    .setContentType("video/mp4")
+                    .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                    .build()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    GoogleCastTheme {
-        Greeting("Android")
+                val mediaLoadOptions = MediaLoadOptions.Builder()
+                    .setAutoplay(true)
+                    .build()
+
+                remoteMediaClient.load(mediaInfo, mediaLoadOptions)
+            }
+        } else {
+            Toast.makeText(this, "Устройство Google Cast не подключено", Toast.LENGTH_SHORT).show()
+        }
     }
 }
